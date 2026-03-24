@@ -17,11 +17,14 @@ spec:
     - match:
         - uri:
             exact: /dashboard_lib.bundle.js
-      route:
-        - destination:
-            host: katib-ui.kubeflow.svc.cluster.local
-            port:
-              number: 80
+      directResponse:
+        status: 200
+        body:
+          string: "/* standalone Katib does not ship the Kubeflow dashboard bundle */"
+      headers:
+        response:
+          set:
+            content-type: application/javascript
     - match:
         - uri:
             prefix: /katib/
@@ -53,4 +56,3 @@ spec:
             host: vscode.dev-workspace.svc.cluster.local
             port:
               number: 8080
-
