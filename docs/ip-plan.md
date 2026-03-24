@@ -26,11 +26,9 @@
 
 ## Recommended Reservation
 
-- `172.19.255.206` is reserved for the `vscode` `LoadBalancer`.
-- `172.19.255.207` is reserved for the `katib-public` `LoadBalancer`.
-- `172.19.255.208` is reserved for the demo `iris-service` `LoadBalancer`.
-- `172.19.255.200-172.19.255.205` and `172.19.255.209-172.19.255.249` stay available for future ML services.
+- `172.19.255.206` is reserved for the Istio ingress `LoadBalancer`.
+- `172.19.255.200-172.19.255.205` and `172.19.255.207-172.19.255.249` stay available for future ML services.
 
 ## Host Reachability Caveat
 
-Because this lab runs on Docker Desktop for macOS, these MetalLB IPs are not directly reachable from the host by default. This repo makes the reserved service IPs reachable by adding them as `lo0` aliases on macOS and binding the corresponding `NodePort`s to those same IPs through kind.
+Because this lab runs on Docker Desktop for macOS, these MetalLB IPs are not directly reachable from the host by default. This repo makes the reserved ingress IP reachable by adding it as an `lo0` alias on macOS and binding the Istio ingress `NodePort` to that same IP through kind.
