@@ -4,12 +4,9 @@ metadata:
   name: iris-service
   namespace: mlops-apps
 spec:
-  type: LoadBalancer
-  loadBalancerIP: __IRIS_LOADBALANCER_IP__
   selector:
     app: iris-service
   ports:
     - name: http
       port: 80
       targetPort: 8000
-      nodePort: __IRIS_NODEPORT__
