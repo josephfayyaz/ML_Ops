@@ -4,12 +4,9 @@ metadata:
   name: vscode
   namespace: dev-workspace
 spec:
-  type: LoadBalancer
-  loadBalancerIP: __VSCODE_LOADBALANCER_IP__
   selector:
     app: vscode
   ports:
     - name: http
-      port: 80
+      port: 8080
       targetPort: 8080
-      nodePort: __VSCODE_NODEPORT__
