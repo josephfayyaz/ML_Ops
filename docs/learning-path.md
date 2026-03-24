@@ -17,10 +17,10 @@ Study `MetalLB` next. In cloud Kubernetes, a cloud provider allocates service IP
 Study `Istio` after MetalLB. Istio is responsible for:
 
 - a single ingress entrypoint
-- host-based routing
+- path-based routing on one stable IP
 - service-mesh traffic policies
 
-In this lab, `Istio` is how the browser reaches code-server, Katib, and the ML API.
+In this lab, `Istio` is how the browser reaches code-server, Katib, and the ML API through `172.19.255.206`.
 
 ## Step 4: Understand The Developer Workspace
 
@@ -51,8 +51,8 @@ Katib runs hyperparameter tuning as Kubernetes-native trial Jobs. In this lab:
 Once the base platform works, the next good extensions are:
 
 - replace the iris demo with your own training image
+- add multiple inference versions and route between subsets with Istio
 - add model registry and artifact storage
 - add KServe for inference serving
 - add Prometheus and Grafana for monitoring
 - add TLS and real DNS instead of local `nip.io`
-
