@@ -4,7 +4,7 @@ metadata:
   name: iris-service
   namespace: mlops-apps
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: iris-service
@@ -17,6 +17,11 @@ spec:
         - name: iris-service
           image: __IRIS_IMAGE__
           imagePullPolicy: IfNotPresent
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
           ports:
             - containerPort: 8000
               name: http
@@ -38,4 +43,3 @@ spec:
               memory: 128Mi
             limits:
               memory: 512Mi
-
