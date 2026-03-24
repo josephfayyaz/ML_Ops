@@ -5,17 +5,17 @@ nodes:
   - role: control-plane
     image: __KIND_NODE_IMAGE__
     extraPortMappings:
-      - containerPort: __VSCODE_NODEPORT__
+      - containerPort: __ISTIO_HTTP_NODEPORT__
         hostPort: 80
-        listenAddress: "__VSCODE_EXTERNAL_IP__"
+        listenAddress: "__INGRESS_EXTERNAL_IP__"
         protocol: TCP
-      - containerPort: __KATIB_NODEPORT__
-        hostPort: 80
-        listenAddress: "__KATIB_EXTERNAL_IP__"
+      - containerPort: __ISTIO_HTTPS_NODEPORT__
+        hostPort: 443
+        listenAddress: "__INGRESS_EXTERNAL_IP__"
         protocol: TCP
-      - containerPort: __IRIS_NODEPORT__
-        hostPort: 80
-        listenAddress: "__IRIS_EXTERNAL_IP__"
+      - containerPort: __ISTIO_STATUS_NODEPORT__
+        hostPort: 15021
+        listenAddress: "127.0.0.1"
         protocol: TCP
     extraMounts:
       - hostPath: __HOST_WORKSPACE_PATH__
