@@ -1,11 +1,13 @@
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
+import os
 import uvicorn
 
 from mlops_iris.model import get_serving_bundle
 
 
 app = FastAPI(title="iris-ml-api", version="0.1.0")
+POD_NAME = os.getenv("POD_NAME", os.getenv("HOSTNAME", "unknown"))
 
 
 class IrisRequest(BaseModel):
@@ -20,6 +22,7 @@ def root() -> dict:
     bundle = get_serving_bundle()
     return {
         "service": "iris-ml-api",
+        "podName": POD_NAME,
         "model": "RandomForestClassifier",
         "baselineAccuracy": round(bundle.accuracy, 4),
         "featureNames": bundle.feature_names,
@@ -29,7 +32,7 @@ def root() -> dict:
 
 @app.get("/healthz")
 def healthz() -> dict:
-    return {"status": "ok"}
+    return {"status": "ok", "podName": POD_NAME}
 
 
 @app.post("/predict")
@@ -55,4 +58,3 @@ def predict(payload: IrisRequest) -> dict:
 
 if __name__ == "__main__":
     uvicorn.run("mlops_iris.serve:app", host="0.0.0.0", port=8000)
-
