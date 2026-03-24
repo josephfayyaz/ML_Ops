@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vscode
+  namespace: dev-workspace
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vscode
+  template:
+    metadata:
+      labels:
+        app: vscode
+    spec:
+      securityContext:
+        fsGroup: 1000
+      containers:
+        - name: code-server
+          image: ghcr.io/coder/code-server:latest
+          imagePullPolicy: IfNotPresent
+          args:
+            - --bind-addr
+            - 0.0.0.0:8080
+            - --auth
+            - password
+            - /home/coder/project
+          env:
+            - name: PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: vscode-auth
+                  key: password
+          ports:
+            - containerPort: 8080
+              name: http
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 1Gi
+          volumeMounts:
+            - name: home
+              mountPath: /home/coder
+            - name: project
+              mountPath: /home/coder/project
+      volumes:
+        - name: home
+          persistentVolumeClaim:
+            claimName: vscode-home
+        - name: project
+          hostPath:
+            path: __WORKSPACE_NODE_PATH__
+            type: Directory

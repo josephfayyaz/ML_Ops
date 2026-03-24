@@ -1,0 +1,16 @@
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: code-server
+  namespace: dev-workspace
+spec:
+  hosts:
+    - "code.127.0.0.1.nip.io"
+  gateways:
+    - istio-ingress/mlops-gateway
+  http:
+    - route:
+        - destination:
+            host: vscode.dev-workspace.svc.cluster.local
+            port:
+              number: 8080

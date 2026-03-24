@@ -1,0 +1,18 @@
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: mlops-gateway
+  namespace: istio-ingress
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - "code.127.0.0.1.nip.io"
+        - "iris.127.0.0.1.nip.io"
+        - "katib.127.0.0.1.nip.io"
+

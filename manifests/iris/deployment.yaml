@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iris-service
+  namespace: mlops-apps
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: iris-service
+  template:
+    metadata:
+      labels:
+        app: iris-service
+    spec:
+      containers:
+        - name: iris-service
+          image: __IRIS_IMAGE__
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+              name: http
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+

@@ -1,0 +1,17 @@
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: iris-api
+  namespace: mlops-apps
+spec:
+  hosts:
+    - "iris.127.0.0.1.nip.io"
+  gateways:
+    - istio-ingress/mlops-gateway
+  http:
+    - route:
+        - destination:
+            host: iris-service.mlops-apps.svc.cluster.local
+            port:
+              number: 80
+
