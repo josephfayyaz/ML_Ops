@@ -11,13 +11,7 @@ KUBECONFIG_CONTEXT="kind-${CLUSTER_NAME}"
 KIND_NETWORK_NAME="${KIND_NETWORK_NAME:-kind}"
 KIND_NODE_IMAGE="${KIND_NODE_IMAGE:-kindest/node:v1.33.1}"
 
-VSCODE_EXTERNAL_IP="${VSCODE_EXTERNAL_IP:-172.19.255.206}"
-KATIB_EXTERNAL_IP="${KATIB_EXTERNAL_IP:-172.19.255.207}"
-IRIS_EXTERNAL_IP="${IRIS_EXTERNAL_IP:-172.19.255.208}"
-
-VSCODE_NODEPORT="${VSCODE_NODEPORT:-30086}"
-KATIB_NODEPORT="${KATIB_NODEPORT:-30087}"
-IRIS_NODEPORT="${IRIS_NODEPORT:-30088}"
+INGRESS_EXTERNAL_IP="${INGRESS_EXTERNAL_IP:-172.19.255.206}"
 
 ISTIO_HTTP_NODEPORT="${ISTIO_HTTP_NODEPORT:-30080}"
 ISTIO_HTTPS_NODEPORT="${ISTIO_HTTPS_NODEPORT:-30443}"
@@ -55,12 +49,10 @@ ip_alias_present() {
 
 ensure_ip_aliases() {
   local missing=0
-  for ip in "$VSCODE_EXTERNAL_IP" "$KATIB_EXTERNAL_IP" "$IRIS_EXTERNAL_IP"; do
-    if ! ip_alias_present "$ip"; then
-      echo "Missing loopback alias ${ip}. Run: sudo ifconfig lo0 alias ${ip}/32 up" >&2
-      missing=1
-    fi
-  done
+  if ! ip_alias_present "$INGRESS_EXTERNAL_IP"; then
+    echo "Missing loopback alias ${INGRESS_EXTERNAL_IP}. Run: sudo ifconfig lo0 alias ${INGRESS_EXTERNAL_IP}/32 up" >&2
+    missing=1
+  fi
 
   if [[ "$missing" -ne 0 ]]; then
     exit 1
@@ -138,24 +130,16 @@ ensure_cluster() {
     "$GENERATED_DIR/kind-cluster.yaml" \
     "__CLUSTER_NAME__" "$CLUSTER_NAME" \
     "__KIND_NODE_IMAGE__" "$KIND_NODE_IMAGE" \
-    "__VSCODE_NODEPORT__" "$VSCODE_NODEPORT" \
-    "__KATIB_NODEPORT__" "$KATIB_NODEPORT" \
-    "__IRIS_NODEPORT__" "$IRIS_NODEPORT" \
-    "__VSCODE_EXTERNAL_IP__" "$VSCODE_EXTERNAL_IP" \
-    "__KATIB_EXTERNAL_IP__" "$KATIB_EXTERNAL_IP" \
-    "__IRIS_EXTERNAL_IP__" "$IRIS_EXTERNAL_IP" \
+    "__ISTIO_HTTP_NODEPORT__" "$ISTIO_HTTP_NODEPORT" \
+    "__ISTIO_HTTPS_NODEPORT__" "$ISTIO_HTTPS_NODEPORT" \
+    "__ISTIO_STATUS_NODEPORT__" "$ISTIO_STATUS_NODEPORT" \
+    "__INGRESS_EXTERNAL_IP__" "$INGRESS_EXTERNAL_IP" \
     "__HOST_WORKSPACE_PATH__" "$HOST_WORKSPACE_PATH" \
     "__WORKSPACE_NODE_PATH__" "$WORKSPACE_NODE_PATH"
 
   if kind get clusters | grep -qx "$CLUSTER_NAME"; then
     log "kind cluster ${CLUSTER_NAME} already exists"
-    if ! docker port "${CLUSTER_NAME}-control-plane" 2>/dev/null | grep -q "^${VSCODE_NODEPORT}/tcp -> ${VSCODE_EXTERNAL_IP}:80$"; then
-      recreate_cluster=1
-    fi
-    if ! docker port "${CLUSTER_NAME}-control-plane" 2>/dev/null | grep -q "^${KATIB_NODEPORT}/tcp -> ${KATIB_EXTERNAL_IP}:80$"; then
-      recreate_cluster=1
-    fi
-    if ! docker port "${CLUSTER_NAME}-control-plane" 2>/dev/null | grep -q "^${IRIS_NODEPORT}/tcp -> ${IRIS_EXTERNAL_IP}:80$"; then
+    if ! docker port "${CLUSTER_NAME}-control-plane" 2>/dev/null | grep -q "^${ISTIO_HTTP_NODEPORT}/tcp -> ${INGRESS_EXTERNAL_IP}:80$"; then
       recreate_cluster=1
     fi
 
@@ -259,7 +243,8 @@ install_istio() {
 
   kubectl patch service istio-ingressgateway -n istio-ingress --type merge -p "{
     \"spec\": {
-      \"type\": \"NodePort\",
+      \"type\": \"LoadBalancer\",
+      \"loadBalancerIP\": \"${INGRESS_EXTERNAL_IP}\",
       \"ports\": [
         {\"name\": \"status-port\", \"port\": 15021, \"protocol\": \"TCP\", \"targetPort\": 15021, \"nodePort\": ${ISTIO_STATUS_NODEPORT}},
         {\"name\": \"http2\", \"port\": 80, \"protocol\": \"TCP\", \"targetPort\": 80, \"nodePort\": ${ISTIO_HTTP_NODEPORT}},
@@ -324,27 +309,9 @@ deploy_workloads() {
     "__WORKSPACE_NODE_PATH__" "$WORKSPACE_NODE_PATH"
 
   render_template \
-    "$ROOT_DIR/manifests/vscode/service.yaml" \
-    "$GENERATED_DIR/vscode-service.yaml" \
-    "__VSCODE_LOADBALANCER_IP__" "$VSCODE_EXTERNAL_IP" \
-    "__VSCODE_NODEPORT__" "$VSCODE_NODEPORT"
-
-  render_template \
     "$ROOT_DIR/manifests/iris/deployment.yaml" \
     "$GENERATED_DIR/iris-deployment.yaml" \
     "__IRIS_IMAGE__" "$IRIS_IMAGE"
-
-  render_template \
-    "$ROOT_DIR/manifests/iris/service.yaml" \
-    "$GENERATED_DIR/iris-service.yaml" \
-    "__IRIS_LOADBALANCER_IP__" "$IRIS_EXTERNAL_IP" \
-    "__IRIS_NODEPORT__" "$IRIS_NODEPORT"
-
-  render_template \
-    "$ROOT_DIR/manifests/katib/public-proxy-service.yaml" \
-    "$GENERATED_DIR/katib-public-service.yaml" \
-    "__KATIB_LOADBALANCER_IP__" "$KATIB_EXTERNAL_IP" \
-    "__KATIB_NODEPORT__" "$KATIB_NODEPORT"
 
   render_template \
     "$ROOT_DIR/manifests/katib/iris-experiment.yaml" \
@@ -353,17 +320,23 @@ deploy_workloads() {
 
   log "Deploying code-server"
   kubectl apply -f "$ROOT_DIR/manifests/vscode/pvc.yaml" >/dev/null
-  kubectl apply -f "$GENERATED_DIR/vscode-service.yaml" >/dev/null
+  kubectl apply -f "$ROOT_DIR/manifests/vscode/service.yaml" >/dev/null
   kubectl apply -f "$GENERATED_DIR/vscode-deployment.yaml" >/dev/null
 
   log "Deploying iris API"
-  kubectl apply -f "$GENERATED_DIR/iris-service.yaml" >/dev/null
+  kubectl apply -f "$ROOT_DIR/manifests/iris/service.yaml" >/dev/null
   kubectl apply -f "$GENERATED_DIR/iris-deployment.yaml" >/dev/null
 
-  log "Deploying Katib public proxy"
-  kubectl apply -f "$ROOT_DIR/manifests/katib/public-proxy-configmap.yaml" >/dev/null
-  kubectl apply -f "$ROOT_DIR/manifests/katib/public-proxy-deployment.yaml" >/dev/null
-  kubectl apply -f "$GENERATED_DIR/katib-public-service.yaml" >/dev/null
+  log "Applying Istio routes and traffic policy"
+  kubectl apply -f "$ROOT_DIR/manifests/istio/gateway.yaml" >/dev/null
+  kubectl apply -f "$ROOT_DIR/manifests/istio/virtualservice-ingress.yaml" >/dev/null
+  kubectl apply -f "$ROOT_DIR/manifests/istio/destinationrule-iris.yaml" >/dev/null
+  kubectl delete virtualservice -n dev-workspace code-server --ignore-not-found=true >/dev/null 2>&1 || true
+  kubectl delete virtualservice -n mlops-apps iris-api --ignore-not-found=true >/dev/null 2>&1 || true
+  kubectl delete virtualservice -n kubeflow katib-ui --ignore-not-found=true >/dev/null 2>&1 || true
+  kubectl delete service -n kubeflow katib-public --ignore-not-found=true >/dev/null 2>&1 || true
+  kubectl delete deployment -n kubeflow katib-public-proxy --ignore-not-found=true >/dev/null 2>&1 || true
+  kubectl delete configmap -n kubeflow katib-public-proxy --ignore-not-found=true >/dev/null 2>&1 || true
 
   log "Starting Katib experiment"
   kubectl delete experiment -n katib-experiments iris-random-search --ignore-not-found=true --wait=true >/dev/null 2>&1 || true
@@ -373,21 +346,20 @@ deploy_workloads() {
 
   kubectl rollout status deployment/vscode -n dev-workspace --timeout=300s >/dev/null
   kubectl rollout status deployment/iris-service -n mlops-apps --timeout=300s >/dev/null
-  kubectl rollout status deployment/katib-public-proxy -n kubeflow --timeout=300s >/dev/null
 }
 
 validate_stack() {
   log "Running basic validation"
   kubectl get ipaddresspool -n metallb-system >/dev/null
-  kubectl get svc -n dev-workspace vscode >/dev/null
-  kubectl get svc -n kubeflow katib-public >/dev/null
-  kubectl get svc -n mlops-apps iris-service >/dev/null
+  kubectl get svc -n istio-ingress istio-ingressgateway >/dev/null
+  kubectl get destinationrule -n mlops-apps iris-service >/dev/null
   kubectl get experiment -n katib-experiments iris-random-search >/dev/null
   istioctl proxy-status >/dev/null 2>&1 || true
 
-  curl -fsS "http://${IRIS_EXTERNAL_IP}/healthz" >/dev/null
-  curl -fsSI "http://${VSCODE_EXTERNAL_IP}/" >/dev/null
-  curl -fsSI "http://${KATIB_EXTERNAL_IP}/" >/dev/null
+  curl -fsS "http://${INGRESS_EXTERNAL_IP}/iris/healthz" >/dev/null
+  curl -fsSI "http://${INGRESS_EXTERNAL_IP}/" >/dev/null
+  curl -fsS "http://${INGRESS_EXTERNAL_IP}/katib/" >/dev/null
+  curl -fsSI "http://${INGRESS_EXTERNAL_IP}/dashboard_lib.bundle.js" >/dev/null
 }
 
 print_summary() {
@@ -403,9 +375,9 @@ Cluster:
   context: ${KUBECONFIG_CONTEXT}
 
 Endpoints:
-  VS Code: http://${VSCODE_EXTERNAL_IP}
-  Katib:   http://${KATIB_EXTERNAL_IP}
-  ML API:  http://${IRIS_EXTERNAL_IP}
+  VS Code: http://${INGRESS_EXTERNAL_IP}/
+  Katib:   http://${INGRESS_EXTERNAL_IP}/katib/
+  ML API:  http://${INGRESS_EXTERNAL_IP}/iris/
 
 Credentials:
   code-server password file: ${CODE_SERVER_PASSWORD_FILE}
