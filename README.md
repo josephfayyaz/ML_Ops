@@ -23,6 +23,14 @@ Tested on March 24, 2026 with:
 
 ## Quick Start
 
+Add the required loopback aliases on macOS:
+
+```bash
+sudo ifconfig lo0 alias 172.19.255.206/32 up
+sudo ifconfig lo0 alias 172.19.255.207/32 up
+sudo ifconfig lo0 alias 172.19.255.208/32 up
+```
+
 Run the full bootstrap:
 
 ```bash
@@ -31,21 +39,19 @@ Run the full bootstrap:
 
 Once the script completes, use:
 
-- VS Code: `http://code.127.0.0.1.nip.io:8080`
-- ML API: `http://iris.127.0.0.1.nip.io:8080`
-- Katib UI: `http://katib.127.0.0.1.nip.io:8080`
+- VS Code: `http://172.19.255.206`
+- Katib UI: `http://172.19.255.207`
+- ML API: `http://172.19.255.208`
 
 The generated code-server password is stored in `.state/vscode-password.txt`.
 
 ## Important Networking Note
 
-On Docker Desktop for macOS, the `kind` container network is not directly reachable from the host. That means MetalLB still works correctly inside the cluster, but the MetalLB IPs are not directly reachable from macOS by default.
+On Docker Desktop for macOS, the `kind` container network is not directly reachable from the host. This lab works around that by:
 
-For laptop access, this lab uses:
-
-- MetalLB for in-cluster `LoadBalancer` behavior
-- Istio ingress through host port `8080`
-- fixed `NodePort` mappings from `kind` to the host
+- reserving `172.19.255.206-208` on `lo0`
+- assigning the same addresses to Kubernetes `LoadBalancer` services via MetalLB
+- mapping those service `NodePort`s onto the same host IPs through the kind control-plane container
 
 ## Documentation
 
@@ -53,4 +59,3 @@ For laptop access, this lab uses:
 - [Deployment Runbook](docs/deployment-runbook.md)
 - [IP Plan](docs/ip-plan.md)
 - [Learning Path](docs/learning-path.md)
-
