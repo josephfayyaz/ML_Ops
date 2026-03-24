@@ -27,8 +27,6 @@ Add the required loopback aliases on macOS:
 
 ```bash
 sudo ifconfig lo0 alias 172.19.255.206/32 up
-sudo ifconfig lo0 alias 172.19.255.207/32 up
-sudo ifconfig lo0 alias 172.19.255.208/32 up
 ```
 
 Run the full bootstrap:
@@ -39,9 +37,9 @@ Run the full bootstrap:
 
 Once the script completes, use:
 
-- VS Code: `http://172.19.255.206`
-- Katib UI: `http://172.19.255.207`
-- ML API: `http://172.19.255.208`
+- VS Code: `http://172.19.255.206/`
+- Katib UI: `http://172.19.255.206/katib/`
+- ML API: `http://172.19.255.206/iris/`
 
 The generated code-server password is stored in `.state/vscode-password.txt`.
 
@@ -49,9 +47,15 @@ The generated code-server password is stored in `.state/vscode-password.txt`.
 
 On Docker Desktop for macOS, the `kind` container network is not directly reachable from the host. This lab works around that by:
 
-- reserving `172.19.255.206-208` on `lo0`
-- assigning the same addresses to Kubernetes `LoadBalancer` services via MetalLB
-- mapping those service `NodePort`s onto the same host IPs through the kind control-plane container
+- reserving `172.19.255.206` on `lo0`
+- assigning the same address to the Istio ingress `LoadBalancer`
+- mapping the Istio ingress `NodePort`s onto that IP through the kind control-plane container
+
+This keeps the edge of the platform clean:
+
+- one static IP for browser access
+- path-based routing through Istio
+- internal services left as Kubernetes `ClusterIP`s
 
 ## Documentation
 
