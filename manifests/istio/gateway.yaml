@@ -12,7 +12,4 @@ spec:
         name: http
         protocol: HTTP
       hosts:
-        - "code.127.0.0.1.nip.io"
-        - "iris.127.0.0.1.nip.io"
-        - "katib.127.0.0.1.nip.io"
-
+        - "*"
