@@ -50,6 +50,36 @@ spec:
               number: 80
     - match:
         - uri:
+            exact: /housing
+      redirect:
+        uri: /housing/
+    - match:
+        - uri:
+            prefix: /housing/
+      rewrite:
+        uri: /
+      route:
+        - destination:
+            host: house-prices-service.mlops-apps.svc.cluster.local
+            port:
+              number: 80
+    - match:
+        - uri:
+            exact: /results
+      redirect:
+        uri: /results/
+    - match:
+        - uri:
+            prefix: /results/
+      rewrite:
+        uri: /
+      route:
+        - destination:
+            host: katib-results-dashboard.mlops-apps.svc.cluster.local
+            port:
+              number: 80
+    - match:
+        - uri:
             prefix: /
       route:
         - destination:
