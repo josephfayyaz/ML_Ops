@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: house-prices-service
+  namespace: mlops-apps
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: house-prices-service
+  template:
+    metadata:
+      labels:
+        app: house-prices-service
+    spec:
+      containers:
+        - name: house-prices-service
+          image: mlops-demo:0.2.0
+          imagePullPolicy: IfNotPresent
+          command:
+            - python
+            - -m
+            - mlops_house_prices.serve
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          ports:
+            - containerPort: 8000
+              name: http
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
