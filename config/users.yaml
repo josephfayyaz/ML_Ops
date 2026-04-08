@@ -1,0 +1,12 @@
+users:
+  - username: admin
+    role: admin
+    password: Admin!PrivateCloud2026
+  - username: student-1
+    role: student
+    namespace: student-1
+    password: Student1!Cloud2026
+  - username: student-2
+    role: student
+    namespace: student-2
+    password: Student2!Cloud2026

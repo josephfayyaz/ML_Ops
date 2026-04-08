@@ -1,18 +1,18 @@
 apiVersion: metallb.io/v1beta1
 kind: IPAddressPool
 metadata:
-  name: mlops-pool
+  name: platform-pool
   namespace: metallb-system
 spec:
   addresses:
-    - __METALLB_POOL_START__-__METALLB_POOL_END__
+    - __POOL_START__-__POOL_END__
 ---
 apiVersion: metallb.io/v1beta1
 kind: L2Advertisement
 metadata:
-  name: mlops-l2
+  name: platform-l2
   namespace: metallb-system
 spec:
   ipAddressPools:
-    - mlops-pool
+    - platform-pool
 

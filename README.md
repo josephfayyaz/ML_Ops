@@ -1,65 +1,76 @@
-# Laptop MLOps Lab
+# Private Cloud MLOps Lab
 
-This repository provisions a local MLOps platform on top of `kind` for a single macOS laptop running Docker Desktop.
+This repository provisions a laptop-scale private-cloud simulation for five students.
 
-It includes:
+What it deploys:
 
-- `kind` as the local Kubernetes cluster
-- `MetalLB` for a 50-address internal LoadBalancer pool
-- `Istio` for ingress and service-mesh routing
-- `Katib` for hyperparameter tuning
-- a `code-server` pod as the browser-based VS Code workspace
-- a sample ML application and Katib experiment to validate the stack
+- `kind` Kubernetes cluster with one control plane and three worker nodes
+- `MetalLB` for `LoadBalancer` semantics inside the cluster
+- `Istio` ingress with host-based routing on the laptop's LAN IP
+- `Katib` for per-student hyperparameter optimization
+- `MinIO` for datasets, models, and evaluation reports
+- custom browser IDE workspaces with Python, Kubernetes, and MinIO tooling
+- per-student training, evaluation, and model-serving workloads
+- a login-protected portal for datasets, Katib results, artifacts, and service links
 
-Tested on March 24, 2026 with:
+## Access Model
 
-- macOS 26.3.1 on arm64
-- Docker Desktop 4.64.0
-- `kind` 0.29.0
-- Kubernetes 1.33.1
-- MetalLB 0.15.3
-- Istio 1.29.1
-- Katib 0.17.0
+The platform is exposed on the laptop's LAN IP, not `127.0.0.1`.
+
+By default the bootstrap script detects the current LAN IP and uses hostnames like:
+
+- `http://portal.<LAN-IP>.nip.io`
+- `http://katib.<LAN-IP>.nip.io`
+- `http://ws-student-1.<LAN-IP>.nip.io`
+- `http://api-student-1.<LAN-IP>.nip.io`
+
+This is the closest practical local equivalent to a private-cloud ingress without requiring root access for host IP aliases.
+
+MetalLB still assigns a real `LoadBalancer` IP to the Istio ingress service inside the kind network. On macOS, user traffic reaches the platform through the laptop LAN IP and kind port publishing, because Docker Desktop does not expose those inner bridge addresses directly on the host network.
+
+## Default Users
+
+The default credentials are defined in [config/users.yaml](/Users/youseffayyaz/Documents/GitHub/ML_Ops/config/users.yaml).
+
+- `admin` can see all students.
+- each `student-*` user can only see their own workspace, datasets, Katib results, artifacts, and serving endpoint.
+
+## GPU Profiles
+
+This laptop does not have NVIDIA or AMD GPUs. The lab therefore supports:
+
+- `cpu`
+- `nvidia-sim`
+- `amd-sim`
+
+The simulated GPU profiles schedule jobs onto dedicated labeled worker nodes so the placement is real and visible in Kubernetes. When you move to a Linux server with real GPUs, you can switch the same project model to `nvidia-real` or `amd-real` and add the corresponding operator/device plugin.
 
 ## Quick Start
-
-Add the required loopback aliases on macOS:
-
-```bash
-sudo ifconfig lo0 alias 172.19.255.206/32 up
-```
-
-Run the full bootstrap:
 
 ```bash
 ./scripts/bootstrap.sh
 ```
 
-Once the script completes, use:
+The script will print the portal, Katib, workspace, and inference URLs.
 
-- VS Code: `http://172.19.255.206/`
-- Katib UI: `http://172.19.255.206/katib/`
-- ML API: `http://172.19.255.206/iris/`
+## Student Workflow
 
-The generated code-server password is stored in `.state/vscode-password.txt`.
+1. Log into the portal.
+2. Upload a dataset to your own bucket.
+3. Open your own browser IDE workspace.
+4. Edit `project.yaml` and the Python files under `student_lab/`.
+5. Run `python -m student_lab.render_manifests`.
+6. Run `kubectl apply -f manifests/rendered/katib-experiment.yaml`.
+7. Wait for Katib to finish and inspect best hyperparameters in the portal or Katib UI.
+8. Run `kubectl create -f manifests/rendered/train-job.yaml`.
+9. Run `kubectl create -f manifests/rendered/evaluate-job.yaml`.
+10. Run `kubectl apply -f manifests/rendered/serve-deployment.yaml`.
+11. Send inference requests to your own API hostname.
 
-## Important Networking Note
+## Cleanup
 
-On Docker Desktop for macOS, the `kind` container network is not directly reachable from the host. This lab works around that by:
+```bash
+./scripts/teardown.sh
+```
 
-- reserving `172.19.255.206` on `lo0`
-- assigning the same address to the Istio ingress `LoadBalancer`
-- mapping the Istio ingress `NodePort`s onto that IP through the kind control-plane container
-
-This keeps the edge of the platform clean:
-
-- one static IP for browser access
-- path-based routing through Istio
-- internal services left as Kubernetes `ClusterIP`s
-
-## Documentation
-
-- [Architecture](docs/architecture.md)
-- [Deployment Runbook](docs/deployment-runbook.md)
-- [IP Plan](docs/ip-plan.md)
-- [Learning Path](docs/learning-path.md)
+This removes the cluster and the project-specific Docker images.

@@ -1,0 +1,78 @@
+project:
+  name: student-ml-project
+  task: regression
+  objective_metric_name: rmse
+
+dataset:
+  uri: s3://${STUDENT_BUCKET}/datasets/ames_housing_selected.csv
+  prefix: datasets/
+  auto_select_latest: true
+  target_column: saleprice
+  feature_columns:
+    - overallqual
+    - grlivarea
+    - garagecars
+    - totalbsmtsf
+    - yearbuilt
+  test_size: 0.2
+  random_state: 42
+
+model:
+  algorithm: random_forest
+  defaults:
+    n_estimators: 120
+    max_depth: 14
+    min_samples_split: 4
+    min_samples_leaf: 2
+
+katib:
+  max_trial_count: 6
+  max_failed_trial_count: 3
+  parallel_trial_count: 1
+  parameters:
+    n_estimators:
+      min: 80
+      max: 260
+    max_depth:
+      min: 4
+      max: 20
+    min_samples_split:
+      min: 2
+      max: 12
+    min_samples_leaf:
+      min: 1
+      max: 8
+
+compute:
+  target: cpu
+  cpu:
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+    limits:
+      cpu: "2"
+      memory: "4Gi"
+  nvidia_sim:
+    requests:
+      cpu: "1"
+      memory: "2Gi"
+    limits:
+      cpu: "4"
+      memory: "8Gi"
+  amd_sim:
+    requests:
+      cpu: "1"
+      memory: "2Gi"
+    limits:
+      cpu: "4"
+      memory: "8Gi"
+
+serving:
+  port: 8081
+  replicas: 1
+  requests:
+    cpu: "100m"
+    memory: "256Mi"
+  limits:
+    cpu: "500m"
+    memory: "512Mi"

@@ -1,1 +1,0 @@
-"""Katib results dashboard package."""

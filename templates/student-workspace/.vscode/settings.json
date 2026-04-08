@@ -1,0 +1,11 @@
+{
+  "python.defaultInterpreterPath": "/opt/venv/bin/python",
+  "python.terminal.activateEnvironment": true,
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}"
+  ],
+  "jupyter.jupyterServerType": "local",
+  "files.exclude": {
+    "**/__pycache__": true
+  }
+}
